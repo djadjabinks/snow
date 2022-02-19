@@ -242,26 +242,47 @@ print(p.__dict__)
 # Дескрипторы (data descriptor и non-data descriptor)
 
 # Дескриптор это класс содержащий методы __get__, __set__, __del__. А non-data descriptor содержит только get
+# При этом data descriptor имеет приоритет над локальными атрибутами экземпляра, т.е. если будет дескриптор xr и
+# локальный атрибут xr в экземпляре, то при обращении pt.xr будет выводиться значение дескриптора
+# а при использовании non-data descriptor если делаем pt.xr = 5 создастся локальный атрибут xr и потом при pt.xr
+# будет выводиться именно он
+
+class NonData:
+    def __set_name__(self, owner, name):
+        self.name = "_x"                    # это дескриптор не данных который будет читать атрибут _х
+
+    def __get__(self, instance, owner):
+        return getattr(instance, self.name)
 
 class Integer:
+
+    @classmethod
+    def verify_coord(cls, value):
+        if type(value) != int:
+            raise TypeError("Координата должна быть числом")
+
     def __set_name__(self, owner, name):    # self - ссылка на атрибут "х" класса Point3D(экземпляр класса Integer),
         self.name = "_" + name              # owner - это ссылка на сам класс Point3D,
                                             # name - это название атрибута "х"
 
 
     def __get__(self, instance, owner):         # self - ссылка на атрибут "х" класса Point3D(экземпляр класса Integer)
-        return instance.__dict__[self.name]     # instance - ссылка на экземпляр pt класса Point3D, из которого вызван
+        # return instance.__dict__[self.name]     # instance - ссылка на экземпляр pt класса Point3D, из которого вызван
                                                 # owner - это ссылка на сам класс Point3D
+        return getattr(instance, self.name)     # второй вариант вместо return instance.__dict__[self.name]
 
     def __set__(self, instance, value):         # self - ссылка на атрибут "х" класса Point3D(экземпляр класса Integer)
         print(f"__set__:{self.name}={value}")   # instance - это ссылка на экземпляр pt класса Point3D, из которого вызван
-        instance.__dict__[self.name]=value      # value - это значение которое присваивается
+        self.verify_coord(value)
+        # instance.__dict__[self.name]=value      # value - это значение которое присваивается
+        setattr(instance, self.name, value)     # второй вариант вместо instance.__dict__[self.name]=value
 
 
 class Point3D:
     x = Integer()                   # При объявлении атрибута "x" как дескриптор Integer срабатывает метод
     y = Integer()                   # def __set_name__
     z = Integer()
+    xr = NonData()
 
     def __init__(self, x, y, z):
         self.x = x                  # В инициализаторе в момент присваивания срабатывает метод __set__
@@ -270,7 +291,7 @@ class Point3D:
 
 pt = Point3D(1,2,3)                 # При создании экземпляра класса Point3D вызывается инициализатор
 print(pt.x)                            # При запросе атрибута выполняется метод __get__
-
+print(pt.xr, pt.__dict__)
 
 # В классе Point3D объевляем атрибут "x" как дескриптор Integer. При объявлении атрибута срабатывает метод класа
 
