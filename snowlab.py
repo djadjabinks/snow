@@ -295,21 +295,102 @@ print(pt.xr, pt.__dict__)
 
 # В классе Point3D объевляем атрибут "x" как дескриптор Integer. При объявлении атрибута срабатывает метод класа
 
+####################################################################
+
+# Магический метод __call__. Функторы и классы-декораторы
+
+class Counter:
+    def __init__(self):
+        self.__counter = 0
+
+    def __call__(self, step=1, *args, **kwargs):    # Данный метод позволяет вызывать объекты, по-умолчанию он работает для
+        print("__call__")                   # классов, т.е.когда мы пишем c = Counter() срабатывает метод __call__
+        self.__counter += step                 # который в свою очередь вызывает методы __new__, __init__
+        return self.__counter               # но экземпляр класса так вызвать нельзя c(), после того как прописываем
+                                            # в классе __call__ экземпляры становится можно вызывать и такие классы
+                                            # называются функторы
 
 
+c = Counter()
+c2 = Counter()              # таким образом можно создвать множество независимых счетчиков
+c()
+c(10)
+c()
+c2()
+res = c()
+res2 = c2()
+print(res, res2)
+
+# примеры использования вместо функции прерывания
+
+class StripChars:
+    def __init__(self, chars):
+        self.__chars = chars
+        self.__counter = 0
+
+    def __call__(self, *args, **kwargs):
+        if not isinstance(args[0], str):
+            raise TypeError("Аргумент должен быть строкой")
+        return args[0].strip(self.__chars)
+
+s1 = StripChars("! ")
+res = s1("!Hello World !")
+print(res)
+
+# пример использования как декоратор
+
+import math
+
+class Derivate:
+    def __init__(self, func):
+        self.__fn = func
+
+    def __call__(self, x, dx=0.0001, *args, **kwargs):
+        return (self.__fn(x + dx) - self.__fn(x)) / dx
 
 
+@Derivate
+def df_sin(x):
+    return math.sin(x)
+
+#df_sin = Derivate(df_sin)      # тут мы делаем df_sin экземпляром класса Derivate и т.к. есть метод __call__
+                                # то можно сделать вызов экземпляра, по сути класс Derivate получается декоратором
+print(df_sin(math.pi/3))
 
 
+#################################################################
 
+# Магические методы __str__, __repr__, __len__, __abs__
 
+# __str__ для отображения информации об объекте класса для пользователей
+# __repr__  для отображения информации об объекте класса в режиме отладки
 
+class Cat:
+    def __init__(self, name):
+        self.name = name
 
+    def __repr__(self):
+        return f"{self.__class__}: {self.name}"
 
+    def __str__(self):
+        return f"{self.name}"
 
+cat = Cat("Васька")
+print(cat)
 
+# __len__ позволяет применять функцию len() к экземплярам класса
+# __abs__ позволяет применять функцию abs() к экземплярам класса (abs - вычисление модуля)
 
+class Point:
+    def __init__(self, * args):
+        self.__coords = args
 
+    def __len__(self):
+        return len(self.__coords)
 
+    def __abs__(self):
+        return list(map(abs, self.__coords))
 
-
+pt = Point(1, -2 ,4)
+print(len(pt))
+print(abs(pt))
