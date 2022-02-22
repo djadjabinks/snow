@@ -429,7 +429,7 @@ class Clock:
         return self + other     # в данном месте self вызовет __add__ который выполнит сложение
 
     def __iadd__(self, other):
-        if not isinstance(other, int):
+        if not isinstance(other, (int, Clock)):
             raise ArithmeticError("Правый операнд должен быть числом")
         sc = other
         if isinstance(sc, Clock):
@@ -437,11 +437,89 @@ class Clock:
         self.seconds += sc
         return self
 
+    @classmethod
+    def __verify_operand(cls, other):
+        if not isinstance(other, (int, Clock)):
+            raise ArithmeticError("Правый операнд должен быть числом")
+        sc = other
+        if isinstance(sc, Clock):
+            sc = other.seconds
+        return sc
+
+    def __sub__(self, other):
+        if not isinstance(other, (int, Clock)):
+            raise ArithmeticError("Правый операнд должен быть числом")
+        sc = other
+        if isinstance(sc, Clock):
+            sc = other.seconds
+            return Clock(self.seconds - sc)
+        elif isinstance(sc, int):
+            return Clock(-(sc + self.seconds))
+
+    def __rsub__(self, other):          # в уроке такого не было подобрал сам, т.к. other - self не работает
+        return self - -(other)
+
+    def __isub__(self, other):
+        if not isinstance(other, (int, Clock)):
+            raise ArithmeticError("Правый операнд должен быть числом")
+        sc = other
+        if isinstance(sc, Clock):
+            sc = other.seconds
+        self.seconds -= sc
+        return self
+
+    def __mul__(self, other):
+        sc = self.__verify_operand(other)
+        return Clock(self.seconds * sc)
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __floordiv__(self, other):           # __truediv__ не получится т.к. по условию д.б. целое число секунд
+        sc = self.__verify_operand(other)
+        return Clock(self.seconds // sc)
+
+    ########################################
+
+    # Методы сравнений __eq__, __ne__, __lt__, __gt__ и другие
+
+    def __eq__(self, other):                # c1 == c2 если сравнивать 2 экземпляра класса без данного метода то
+        sc = self.__verify_operand(other)     # сравниваться будут ячейки памяти в которых хранятся эти объекты,
+        return self.seconds == sc           # а не сами значения этих экземпляров
+
+    # def __ne__(self, other):    можно обойтись без него, когда итерпрет видит != то пытается выполнить not(c1 == c2)
+
+    def __lt__(self, other):
+        sc = self.__verify_operand(other)
+        return self.seconds < sc
+
+    # def __gt__(self, other):  можно обойтись без него, если есть __lt__, итерпрет просто поменяет операнды местами
+    # аналогично с __le__ и __ge__ работает также
 
 c1 = Clock(2000)
-c2 = Clock(1000)
-c4 = Clock(3000)
+c2 = Clock(100)
+c4 = Clock(10000)
 c5 = c1 + c2 + c4
-c3 = 100 + c1
-print(c3.get_time())
+c2 -= 200
+print(c2.get_time())
 print(c5.get_time())
+c6 = 3000 - c1
+print(c6.get_time())
+c7 = c4 // 2000
+print(c7.get_time())
+print(10000 == c4)
+
+##########################################################################
+# Магические методы __eq__ и __hash__
+
+# в питоне есть функция хэш которая вычисляет определенное значение для неизменяемых объектов, если повторно вычислять
+# хэш одного и того же объекта, то он всегда будет один и тот же.
+
+# экземпляры пользовательских классов считаются неизменяемыми объектами, поэтому у 2-х экземпляров с одинаковыми
+# параметрами будут разные хэши
+
+
+# Ограничения:
+# если a == b(равны), то и их хэши будут равны
+# если hash(a) == hash(b) не гарантирует равенство объектов
+# если hash(a) != hash(b) то объекты точно не равны
