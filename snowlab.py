@@ -515,6 +515,9 @@ print(10000 == c4)
 # в питоне есть функция хэш которая вычисляет определенное значение для неизменяемых объектов, если повторно вычислять
 # хэш одного и того же объекта, то он всегда будет один и тот же.
 
+# в словаре в качестве ключа хранится кортеж из хэша и названия ключа, сначала значение ищется по хэшу, если есть
+# одинакавые хэши то уже сравнивается по значению ключа.
+
 # экземпляры пользовательских классов считаются неизменяемыми объектами, поэтому у 2-х экземпляров с одинаковыми
 # параметрами будут разные хэши
 
@@ -523,3 +526,227 @@ print(10000 == c4)
 # если a == b(равны), то и их хэши будут равны
 # если hash(a) == hash(b) не гарантирует равенство объектов
 # если hash(a) != hash(b) то объекты точно не равны
+
+class PointHash:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+
+    def __hash__(self):
+        return hash((self.x, self.y)) # т.е. мы поменяли вычисление хэша от объекта класса на вычисление хэша от
+                                      # кортежа координат. Делаем это только в том случае если надо воспринимать
+                                      # как одинаковые
+pt1 = PointHash(1, 2)
+pt2 = PointHash(1, 2)
+print(hash(pt1), hash(pt2))  # если pt1 == pt2 выдает false, то функция hash считает что объекты разные,
+# но если перегружен метод __eq__, то функция hash считает объекты не хэшируемыми, т.к. нарушен алгоритм работы hash
+# чтобы поправить это нужен метод __hash__
+
+d = {}
+d[pt1] = 1
+d[pt2] = 2
+print(d.items()) # если у нас переопределена __hash__ как показано выше, то при добавлении объектов в словарь, они
+                # будут восприниматься как один объект и d[pt2] = 2 перезапишет d[pt1] = 1
+
+
+##################################################################
+
+# Магический метод __bool__ __len__
+
+# Со стандартными типами данных функция bool работает следующим образом: для пустых значаний и цифры 0 будет False
+# для остальных True
+
+# Для экземпляров класса всегда возвращает True, но можно переопредить либо __bool__ либо __len__, т.к. если __bool__
+# не переопредела то она вызывает метод __len__
+
+class PointBool:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __len__(self):
+        return self.x * self.x + self.y * self.y
+
+pt3 = PointBool(2, 3)
+print(bool(pt3))  # вернет True, т.к. возвращает True от любого ненулевого числа
+
+
+################################################################
+
+# Магические методы __getitem__, __setitem__ и __delitem__
+
+class Student:
+    def __init__(self, name, marks):
+        self.name = name
+        self.marks = marks
+
+    def __getitem__(self, item): # позволяет через выражение s[2] напрямую обратиться к элементу списка
+        if 0 <= item < len(self.marks):
+            return self.marks[item]  # если использовать свой метод, то получится выражение s.method_name(2)
+        else:
+            raise IndexError("Неверный индекс")
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, int) and key < 0:
+            raise TypeError("Индекс должен быть целым не отрицательным")
+        if key >= len(self.marks):
+            off = key + 1 - len(self.marks)
+            self.marks.extend([None]*off)
+        self.marks[key] = value   # !!!!!! set ничего не возвращает return не нужен !!!!!
+
+    def __delitem__(self, key):
+        if not isinstance(key, int) and key < 0:
+            raise TypeError("Индекс должен быть целым не отрицательным")
+        del self.marks[key]
+
+s = Student('Сергей', [5,5,3,2,4])
+s[10] = 3
+print(s.marks)
+del s[6]
+print(s.marks)
+
+#####################################################################
+
+# Магические методы __iter__ и __next__
+
+# Итератор это объект у которого есть метод __next__. Без метода __iter__ можно пройти по элементам с помощью функции
+# next, но нельзя использовать объект в цикле т.к. будет ошибка что объект не итерируемый
+
+class FRange:
+    def __init__(self, start = 0.0, stop = 0.0, step = 1.0):
+        self.start = start
+        self.stop = stop
+        self.step = step
+        self.value = self.start - self.step
+
+    def __iter__(self):  # получение итератора для перебора объекта
+        self.value = self.start - self.step
+        return self
+
+    def __next__(self):  # переход к следующему элементу и его считывание
+        if self.value + self.step < self.stop:
+            self.value += self.step
+            return self.value
+        else:
+            raise StopIteration
+
+fr = FRange(0, 2, 0.5)
+print(next(fr))
+print(fr.__next__())
+print(fr.__next__())
+print(fr.__next__())
+for i in fr:
+    print(i)
+
+class FRange2D:
+    def __init__(self, start = 0.0, stop = 0.0, step = 1.0, rows = 5):
+        self.rows = rows
+        self.fr = FRange(start, stop, step)
+
+    def __iter__(self):
+        self.value = 0  # self.value может быть объявлено как тут так и в __init__ разницу не увидел
+        return self
+
+    def __next__(self):
+        if self.value < self.rows:
+            self.value += 1
+            return  iter(self.fr)
+        else:
+            raise StopIteration
+
+fr2 = FRange2D(0, 2, 0.5, 5)
+for row in fr2:
+    for x in row:
+        print(x, end=" ")
+    print()
+
+#################################################################
+
+# Наследование
+
+class Geom:
+    def __init__(self, name):
+        self.name = name
+
+    def set_coords(self, x1, y1, x2, y2):  # если этот метод вызван из экземпляра дочернего класса, то self ссылается
+        self.x1 = x1                       # на этот экземпляр дочернего класса.
+        self.x2 = x2           # т.к. self базового класса может ссылаться не только на объекты этого класса, но и на
+        self.y1 = y1           # объекты дочерних классов, все зависит от того откуда был вызван метод
+        self.y2 = y2
+
+
+class Line(Geom):
+    def draw(self):
+        print("Рисование линии")
+
+class Rect(Geom):
+    def draw(self):
+        print("Рисование прямоугольника")
+
+
+l = Line('line')
+l.set_coords(1, 1, 2, 2)
+print(l.name)
+r = Rect('rect')
+r.set_coords(1, 1, 2, 2)
+
+print(issubclass(Line, Geom))          #  можно проверить является ли Line подклассом Geom
+# print(issubclass(l, Geom))           # но нельзя проверить экземпляр Line, хотя конечно прописать l.__class__
+                                       # но наверно это не совсем коректно и нужно все же использовать isinstance
+
+# Все классы наследуются от базового класса object. Так и стандартные типы данных тоже являются классами и их
+# можно переопределять
+
+class Vector(list):
+    # pass                   # если не переопределять метод __str__ то будет выводиться как обычный список
+
+    def __str__(self):
+        return ' '.join(map(str, self))  # тут map нужна только потому что ниже список цифр, а их join не сможет
+                                         # соединить в строку и поэтому переводим их в str
+print(Vector([1, 2, 3]))
+v = Vector([1, 2, 3])
+print(type(v))            # тип будет не List, а Vector
+
+#######################################################################
+
+# Наследование. Функция super() и делегирование
+
+class Geom:
+    def __init__(self, x1, y1, x2, y2):
+        print(f"инициализатор {self.__class__}")
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+
+
+
+class Line(Geom):
+    pass
+
+class Rect(Geom):
+    def __init__(self, x1, y1, x2, y2, fill=None):  # если переопределен метод в дочернем классе, то он не будет
+        super().__init__(x1, y1, x2, y2)         # вызываться в базовом, и если мы хотим инициализировать координаты
+        self.fill = fill                    # указанные в базовом нужно самостоятельно вызывать метод баз класса
+                                            # super возвращает ссылку на посредник через который происходит вызов
+                                            # методов базовых классов
+# !!! Обязательно super() должна вызываться раньше дополнительных атрибутов дочернего класса, т.к. если в базовом
+# классе окажется такой же атрибут, то он может быть перезаписан.
+
+# Когда в дочернем классе вызывается функция super() с методом базового класса это называется делегирование
+l = Line(0, 0, 1, 2)
+r = Rect(0, 0, 10, 20)
+
+# При создании экземпляра класса Line вызывается метод __call__ он вызывается из Метакласса
+# он в свою очередь вызывает метод __new__ для создания экземпляра и метод __init__ для его инициализации. Эти методы
+# ищутся в соответствующем классе Line, и если не находятся то по цепочке в базовых классах. __init__ берется из Geom
+# __new__ берется из object
+#
+
+    # def __call__(self, *args, **kwargs):
+    #     obj = self.__new__(self, *args, **kwargs)
+    #     self.__init__(obj, *args, **kwargs)
+    #     return obj
