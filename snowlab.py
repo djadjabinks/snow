@@ -872,3 +872,74 @@ class Point3D:
         self.x = x
         self.y = y
         self.z = z
+
+
+#####################################################################
+
+# Введение в обработку исключений
+
+# Исключения бывают:
+# в момент исполнения
+# при компиляции(до исполнения)
+
+try:
+    1 / 0
+except ValueError:  # можно указывать несколько блоков except. Главное чтобы более базовый класс был ниже и не перехватывал
+    print('ValEr')  # все исключения
+except Exception:
+    print('Er')
+
+def check_value():
+    try:
+        1 / 0
+    except Exception:
+        return False    # в функциях finally будет выполняться раньше чем return
+    finally:
+        print("finally")
+
+check_value()
+
+# Распространение исключений
+
+def func2():
+    return 1 / 0
+
+def func1():
+    func2()
+
+try:
+    func1()
+except Exception:
+    print('обработка на любом уровне возникновения')
+
+# исключение зародилось в func2, распространилось на func1 и затем распространилось на основную программу
+# и исключения можно обрабатывать на всех этих уровнях
+
+# raise
+
+class PrintDataException(Exception):   # можно создавать свои классы исключений наследуясь от баз класса Exception
+    """Класс исключений при отправке данных принтеру""" # в общем случае достаточно и этой строчки и pass
+
+    def __init__(self, *args):                      # можно задавать какое-то свое поведение
+        self.message = args[0] if args else None
+
+    def __str__(self):
+        return f"Ошибка: {self.message}"
+
+class PrintData:
+    def print(self, data):
+        self.send_data(data)
+        print(f"печать {str(data)}")
+
+    def send_data(self, data):
+        if not self.send_to_print(data):
+            raise PrintDataException("принтер не печатает")
+
+    def send_to_print(self, data):
+        return False
+
+p = PrintData()
+try:
+    p.print("123")
+except PrintDataException as z:
+    print(z)
