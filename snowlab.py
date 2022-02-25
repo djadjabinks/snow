@@ -1015,3 +1015,60 @@ print(w.meta.__dict__)  # При срабатывании инициализат
                         # инициализатор срабатывает при вызове класса, то во внешнем классе нужно вызвать
                         # вложенный класс
 
+####################################################################
+
+#  Метаклассы
+
+# Метаклассы это классы которые создают другие классы, например такие как стандартные типы данных. Но метаклассы
+# нельзя порождать динамически каким-то другим метаметаклассом. В питоне метакласс это объект type
+# если передается 1 аргумент, то type отображает тип объекта, но если передать 3 аргумента type(name, bases, dct)
+# name - имя класса
+# bases - базовые классы
+# dct - словарь аргументов и методов
+# то type динамически создает новый класс
+
+# Пользовательские метаклассы
+
+# def create_class_point(name, base, attrs):  # Пользовательские метаклассы можно объявлять как функцию
+#     attrs.update({'MAX_COORD': 100, 'MIN_COORD': 0})
+#     return type(name, base, attrs)
+
+class Meta(type):                               # А можно объявлять и как класс
+    def __new__(cls, name, base, attrs):
+        attrs.update({'MAX_COORD': 100, 'MIN_COORD': 0}) # нужно обновлять attrs т.к. объект класс еще не создан
+        return type.__new__(cls, name, base, attrs)
+
+    def __init__(cls, name, base, attrs):       # инициализатор срабатывает когда объект класа создается и для более
+        super().__init__(name, base, attrs)     # тонкой настройки можно переопределять метод __new__
+        # cls.MAX_COORD = 100
+        # cls.MIN_COORD = 0
+
+class Point(metaclass=Meta):
+    def get_coords(self):
+        return (0, 0)
+
+
+pt = Point()
+print(pt.MAX_COORD)
+print(pt.get_coords())
+
+# пример из джанги
+# Чтобы упростить написание кода например моделей, класс Models является метаклассом и часть функционала по добавлению
+# локальных атрибутов экземпляру выненесено за пределы класса самой создаваемой модели в метакласс Models
+
+class Meta(type):
+    def create_local_attrs(self, *args, **kwargs):
+        for key, value in self.class_attrs.items():
+            self.__dict__[key] = value
+
+    def __init__(cls, name, base, attrs):
+        cls.class_attrs = attrs
+        cls.__init__ = Meta.create_local_attrs
+
+class Women(metaclass=Meta):
+    title = 'Заголовок'
+    content = 'Контент'
+    photo = 'путь к фото'
+
+w = Women()
+print(w.__dict__)
