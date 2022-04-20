@@ -633,6 +633,7 @@ class FRange:
         else:
             raise StopIteration
 
+print('Магические методы __iter__ и __next__')
 fr = FRange(0, 2, 0.5)
 print(next(fr))
 print(fr.__next__())
